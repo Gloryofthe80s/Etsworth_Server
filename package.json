@@ -1,0 +1,16 @@
+{
+  "name": "Etsworth_Server",
+  "version": "0.0.1",
+  "description": "Server for Etsworth.com",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "Jacob Wielgus <jjwielgus@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "logfmt": "~1.0.0-pre2",
+    "express": "~3.4.8"
+  }
+}
