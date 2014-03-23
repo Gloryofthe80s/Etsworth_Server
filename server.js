@@ -29,7 +29,7 @@ cheapItems.remove({}, function(err, result) {
     if (!err) console.log('Cleared cheapItems collection!');
 });
 
-request({uri: 'https://openapi.etsy.com/v2/listings/active?&tags=art,painting&min_price=40&max_price=200&includes=Images&api_key=gpby6hrhuzepnv0rx17946lk', json: true}, function (error, response, body) {
+request({uri: 'https://openapi.etsy.com/v2/listings/active?&limt=2&tags=art,painting&min_price=40&max_price=200&includes=Images&api_key=gpby6hrhuzepnv0rx17946lk', json: true}, function (error, response, body) {
   if (!error && response.statusCode == 200) {
     cheapItems.insert(body, function(err, result) {
         if (err) throw err;
@@ -40,27 +40,42 @@ request({uri: 'https://openapi.etsy.com/v2/listings/active?&tags=art,painting&mi
 
 // ------ Gather expensiveItems collection data
 var expensiveItems = db.collection('expensiveItems');
+var etsyResults = [];
 
 // clear existing data (temporary for testing)
 expensiveItems.remove({}, function(err, result) {
     if (!err) console.log('Cleared expensiveItems collection!')
 });
 
-request({uri: 'https://openapi.etsy.com/v2/listings/active?&tags=art,painting&min_price=250&max_price=3000&includes=Images&api_key=gpby6hrhuzepnv0rx17946lk', json: true}, function (error, response, body) {
+request({uri: 'https://openapi.etsy.com/v2/listings/active?&limit=2&tags=art,painting&min_price=250&max_price=3000&includes=Images&api_key=gpby6hrhuzepnv0rx17946lk', json: true}, function (error, response, body) {
   if (!error && response.statusCode == 200) {
     expensiveItems.insert(body, function(err, result) {
         if (err) throw err;
-        if (result) console.log('Added to expensiveItems collection!');
+        if (result) {
+            console.log('Fresh fetch to expensiveItems collection!');
+
+            expensiveItems.find({}).toArray(function(err, result) {
+                etsyResults = result[0].results;
+                console.log(etsyResults);
+            });
+
+            console.log(etsyResults);
+            // callback/promise needs to be implemented to prevent this from firing too soon.
+            // _.each(etsyResults, function(el, i) {
+            // });
+        }
     });
   }
 })
 
 
+
+
 // // ------ DUMMY MONGO
 
-// cheapItems.find({title:'Dummy Painting'}).toArray(function(err, result) {
+// cheapItems.find().toArray(function(err, result) {
 //     console.log(err);
-//     console.log(result[0]);
+//     console.log(result);
 // });
 
 
