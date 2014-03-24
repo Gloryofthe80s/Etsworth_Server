@@ -8,38 +8,59 @@ var request = require('request'),
       'mongodb://localhost:27017/Items',
     db = mongo.db(mongoUri, {native_parser:true});
 
-// ------ default route
+// ------ default route ------
 
 app.get('/', function(req, res) {
   res.send('Hello World!');
 });
 
-// ------ Dev/Production Port
+// ------ Dev/Production Port ------
 
 var port = Number(process.env.PORT || 5000);
 app.listen(port, function() {
   console.log("Listening on " + port);
 });
 
-// ------ FETCH FUNCTIONS
+// ------ FETCH FUNCTIONS ------
 
 var cheapItems = db.collection('cheapItems');
 var expensiveItems = db.collection('expensiveItems');
 
 function deleteAllCheapItems() {
     cheapItems.remove({}, function(err, result) {
-        if (!err) console.log('Removed all items from cheapItems collection!');
+        if (!err) console.log('Deleted all items from cheapItems collection!');
     });
 }
 
 function deleteAllExpensiveItems() {
     expensiveItems.remove({}, function(err, result) {
-        if (!err) console.log('Removed all items from expensiveItems collection!');
+        if (!err) console.log('Deleted all items from expensiveItems collection!');
     });
 }
 
-function fetchCheapItems() {
-    request({uri: 'https://openapi.etsy.com/v2/listings/active?&limit=1000&offset=100&tags=art,painting&min_price=40&max_price=110&includes=Images&api_key=gpby6hrhuzepnv0rx17946lk', json: true}, function (error, response, body) {
+function fetchCheapItems(howManyHundred) {
+    var theLimit = howManyHundred;
+    var theOffset = 0;
+
+    for (var i = 0; i < theLimit; i += theOffset) {
+        etsyCheapItems(theLimit, theOffset);
+        theOffset += 100;
+    }
+}
+
+function fetchExpensiveItems(howManyHundred) {
+    var theLimit = howManyHundred;
+    var theOffset = 0;
+
+    for (var i = 0; i < theLimit; i += theOffset) {
+        etsyExpensiveItems(theLimit, theOffset);
+        theOffset += 100;
+    }
+}
+
+function etsyCheapItems(limit, offset) {
+
+    request({uri: 'https://openapi.etsy.com/v2/listings/active?&limit='+limit+ '&offset=' +offset+ '&tags=art,painting&min_price=40&max_price=110&includes=Images&api_key=gpby6hrhuzepnv0rx17946lk', json: true}, function (error, response, body) {
         if (!error && response.statusCode == 200) {
 
             //get just the results array from the Etsy return object
@@ -60,15 +81,15 @@ function fetchCheapItems() {
                 //save to Mongo
                 cheapItems.insert(trimmedEtsyItem, function(err, result) {
                     if (err) throw err;
-                    if (result) console.log('added to cheapItems!');
                 });
             })
         }
     })
 }
 
-function fetchExpensiveItems() {
-    request({uri: 'https://openapi.etsy.com/v2/listings/active?&limit=1000&offset=100&tags=art,painting&min_price=250&max_price=3000&includes=Images&api_key=gpby6hrhuzepnv0rx17946lk', json: true}, function (error, response, body) {
+function etsyExpensiveItems(limit, offset) {
+
+    request({uri: 'https://openapi.etsy.com/v2/listings/active?&limit='+limit+ '&offset=' +offset+ '&tags=art,painting&min_price=40&max_price=110&includes=Images&api_key=gpby6hrhuzepnv0rx17946lk', json: true}, function (error, response, body) {
         if (!error && response.statusCode == 200) {
 
             //get just the results array from the Etsy return object
@@ -89,18 +110,17 @@ function fetchExpensiveItems() {
                 //save to Mongo
                 expensiveItems.insert(trimmedEtsyItem, function(err, result) {
                     if (err) throw err;
-                    if (result) console.log('added to expensiveItems!');
                 });
             })
         }
     })
 }
 
+// ------ KICKOFF! ------
 deleteAllCheapItems();
 deleteAllExpensiveItems();
-fetchCheapItems();
-fetchExpensiveItems();
-
+fetchCheapItems(1000);
+fetchExpensiveItems(1000);
 
 
 
