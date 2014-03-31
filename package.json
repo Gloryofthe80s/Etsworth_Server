@@ -1,6 +1,7 @@
 {
   "name": "Etsworth_Server",
   "version": "0.0.1",
+  "private": true,
   "description": "Server for Etsworth.com",
   "main": "server.js",
   "scripts": {
