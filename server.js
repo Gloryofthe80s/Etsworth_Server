@@ -1,3 +1,4 @@
+// ------ REQUIRES ------
 var request = require('request'),
     express = require("express"),
     routes = require('./routes'),
@@ -5,21 +6,18 @@ var request = require('request'),
     path = require('path'),
     app = express(),
     _ = require('underscore'),
-    mongo = require('mongoskin'),
-    mongoUri = process.env.MONGOLAB_URI ||
-      process.env.MONGOHQ_URL ||
-      'mongodb://localhost:27017/Items',
-    db = mongo.db(mongoUri, {native_parser:true});
+    etsyItems = require('./routes/etsyItems'),
 
-// ------ default route ------
+    cheapItemsArray = [],
+    expensiveItemsArray = [];
+    //set global on quizPairs array
+    app.set('quizPairs', []);
 
-app.get('/', function(req, res) {
-  res.send('Hello World!');
-});
+// ------ ROUTES ------
+app.get('/', routes.index);
+app.get('/etsyItems', etsyItems.lasagna);
 
 // ------ BOILERPLATE EXPRESS ------
-
-// all environments
 app.set('port', process.env.PORT || 5000);
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.favicon());
@@ -30,36 +28,23 @@ app.use(express.methodOverride());
 app.use(app.router);
 app.use(express.static(path.join(__dirname, 'public')));
 
-// development only
+// ------ DEVELOPMENT ENV ONLY ------
 if ('development' == app.get('env')) {
   app.use(express.errorHandler());
 }
 
-app.get('/', routes.index);
-
+// ------ LAUNCH SERVER ------
 http.createServer(app).listen(app.get('port'), function(){
   console.log('Express server listening on port ' + app.get('port'));
 });
 
 // ------ FETCH FUNCTIONS ------
-
-var cheapItems = db.collection('cheapItems');
-var expensiveItems = db.collection('expensiveItems');
-
-var cheapItemsArray = [];
-var expensiveItemsArray = [];
-var quizPairs = [];
-
 function deleteAllCheapItems() {
-    cheapItems.remove({}, function(err, result) {
-        if (!err) console.log('Deleted all items from cheapItems collection!');
-    });
+    cheapItemsArray = [];
 }
 
 function deleteAllExpensiveItems() {
-    expensiveItems.remove({}, function(err, result) {
-        if (!err) console.log('Deleted all items from expensiveItems collection!');
-    });
+    expensiveItemsArray = [];
 }
 
 function fetchCheapItems(howManyHundred) {
@@ -88,19 +73,15 @@ function etsyCheapItems(limit, offset) {
         if (!error && response.statusCode == 200) {
 
             //get just the results array from the Etsy return object
-            var bodyResults = [];
-            bodyResults = body.results;
+            var bodyResults = body.results;
 
-            //trim out select props from JSON response and push new obj to Mongo
+            //trim out select props from JSON response and push to cheapItemsArray
             _.each(bodyResults, function(el, i) {
                 var trimmedEtsyItem = {
                     title : el.title,
                     price : el.price,
                     url : el.url,
-                    url_75x75 : el.Images[0].url_75x75,
-                    url_170x135 : el.Images[0].url_170x135,
-                    url_570xN : el.Images[0].url_570xN,
-                    url_fullxfull : el.Images[0].url_fullxfull
+                    url_570xN : el.Images[0] ? el.Images[0].url_570xN : '',
                 };
                 //save to cheapItemsArray
                 cheapItemsArray.push(trimmedEtsyItem);
@@ -118,16 +99,13 @@ function etsyExpensiveItems(limit, offset) {
             var bodyResults = [];
             bodyResults = body.results;
 
-            //trim out select props from JSON response and push new obj to Mongo
+            //trim out select props from JSON response and push new obj to expensiveItemsArray
             _.each(bodyResults, function(el, i) {
                 var trimmedEtsyItem = {
                     title : el.title,
                     price : el.price,
                     url : el.url,
-                    url_75x75 : el.Images[0].url_75x75,
-                    url_170x135 : el.Images[0].url_170x135,
                     url_570xN : el.Images[0].url_570xN,
-                    url_fullxfull : el.Images[0].url_fullxfull
                 };
                 //save to expensiveItemsArray
                 expensiveItemsArray.push(trimmedEtsyItem);
@@ -145,7 +123,7 @@ function generateQuizPairs() {
         staging = _.shuffle(staging);
 
         //put the shuffled 'mini-array' pair in the actual array
-        quizPairs.push(staging);
+        app.get('quizPairs').push(staging);
     }
 }
 
@@ -156,19 +134,7 @@ fetchCheapItems(500);
 fetchExpensiveItems(500);
 
 setInterval(function() {generateQuizPairs();}, 20000);
-setInterval(function() {console.log(quizPairs); console.log(quizPairs.length);}, 25000);
-
-
-
-
-
-
-
-
-
-
-
-
+setInterval(function() {console.log(app.get('quizPairs')); console.log(app.get('quizPairs').length);}, 25000);
 
 
 
