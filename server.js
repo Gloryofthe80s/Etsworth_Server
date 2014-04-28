@@ -6,16 +6,17 @@ var request = require('request'),
     path = require('path'),
     app = express(),
     _ = require('underscore'),
-    etsyItems = require('./routes/etsyItems'),
+    Promise = require('promise')
+    etsyItems = require('./routes/etsyItems');
 
-    cheapItemsArray = [],
-    expensiveItemsArray = [];
-    //set global on quizPairs array
+    //set globals
+    app.set('cheapItemsArray', []);
+    app.set('expensiveItemsArray', []);
     app.set('quizPairs', []);
 
 // ------ ROUTES ------
 app.get('/', routes.index);
-app.get('/etsyItems', etsyItems.lasagna);
+app.get('/etsyItems', etsyItems.quizPairs);
 
 // ------ BOILERPLATE EXPRESS ------
 app.set('port', process.env.PORT || 5000);
@@ -40,11 +41,13 @@ http.createServer(app).listen(app.get('port'), function(){
 
 // ------ FETCH FUNCTIONS ------
 function deleteAllCheapItems() {
-    cheapItemsArray = [];
+    app.set('cheapItemsArray', []);
+    console.log('flushed cheapItemsArray!')
 }
 
 function deleteAllExpensiveItems() {
-    expensiveItemsArray = [];
+    app.set('cheapItemsArray', []);
+    console.log('flushed expensiveItemsArray!')
 }
 
 function fetchCheapItems(howManyHundred) {
@@ -69,7 +72,7 @@ function fetchExpensiveItems(howManyHundred) {
 
 function etsyCheapItems(limit, offset) {
 
-    request({uri: 'https://openapi.etsy.com/v2/listings/active?&limit='+limit+ '&offset=' +offset+ '&tags=art,painting&min_price=40&max_price=110&includes=Images&api_key=gpby6hrhuzepnv0rx17946lk', json: true}, function (error, response, body) {
+    request({uri: 'https://openapi.etsy.com/v2/listings/active?&limit='+limit+ '&offset=' +offset+ '&tags=art,painting&min_price=60&max_price=209&includes=Images&api_key=gpby6hrhuzepnv0rx17946lk', json: true}, function (error, response, body) {
         if (!error && response.statusCode == 200) {
 
             //get just the results array from the Etsy return object
@@ -84,7 +87,7 @@ function etsyCheapItems(limit, offset) {
                     url_570xN : el.Images[0] ? el.Images[0].url_570xN : '',
                 };
                 //save to cheapItemsArray
-                cheapItemsArray.push(trimmedEtsyItem);
+                app.get('cheapItemsArray').push(trimmedEtsyItem);
             })
         }
     })
@@ -92,12 +95,11 @@ function etsyCheapItems(limit, offset) {
 
 function etsyExpensiveItems(limit, offset) {
 
-    request({uri: 'https://openapi.etsy.com/v2/listings/active?&limit='+limit+ '&offset=' +offset+ '&tags=art,painting&min_price=250&max_price=1000&includes=Images&api_key=gpby6hrhuzepnv0rx17946lk', json: true}, function (error, response, body) {
+    request({uri: 'https://openapi.etsy.com/v2/listings/active?&limit='+limit+ '&offset=' +offset+ '&tags=art,painting&min_price=210&max_price=1000&includes=Images&api_key=gpby6hrhuzepnv0rx17946lk', json: true}, function (error, response, body) {
         if (!error && response.statusCode == 200) {
 
             //get just the results array from the Etsy return object
-            var bodyResults = [];
-            bodyResults = body.results;
+            var bodyResults = body.results;
 
             //trim out select props from JSON response and push new obj to expensiveItemsArray
             _.each(bodyResults, function(el, i) {
@@ -105,21 +107,21 @@ function etsyExpensiveItems(limit, offset) {
                     title : el.title,
                     price : el.price,
                     url : el.url,
-                    url_570xN : el.Images[0].url_570xN,
+                    url_570xN : el.Images[0] ? el.Images[0].url_570xN : '',
                 };
                 //save to expensiveItemsArray
-                expensiveItemsArray.push(trimmedEtsyItem);
+                app.get('expensiveItemsArray').push(trimmedEtsyItem);
             })
         }
     })
 }
 
 function generateQuizPairs() {
-    cheapItemsArray = _.shuffle(cheapItemsArray);
-    expensiveItemsArray = _.shuffle(expensiveItemsArray);
+    app.set('cheapItemsArray', _.shuffle(app.get('cheapItemsArray')));
+    app.set('expensiveItemsArray', _.shuffle(app.get('expensiveItemsArray')));
 
-    for (var i = 0; i < cheapItemsArray.length; i++) {
-        var staging = [expensiveItemsArray[i], cheapItemsArray[i]];
+    for (var i = 0; i < app.get('cheapItemsArray').length; i++) {
+        var staging = [app.get('expensiveItemsArray')[i], app.get('cheapItemsArray')[i]];
         staging = _.shuffle(staging);
 
         //put the shuffled 'mini-array' pair in the actual array
@@ -134,7 +136,18 @@ fetchCheapItems(500);
 fetchExpensiveItems(500);
 
 setInterval(function() {generateQuizPairs();}, 20000);
-setInterval(function() {console.log(app.get('quizPairs')); console.log(app.get('quizPairs').length);}, 25000);
+setInterval(function() {console.log(app.get('expensiveItemsArray')); console.log(app.get('expensiveItemsArray').length);}, 25000);
+setInterval(function() {console.log(app.get('cheapItemsArray')); console.log(app.get('cheapItemsArray').length);}, 25000);
 
 
+// function updateItems(callback) {
+//     fetchCheapItems(500);
+//     fetchExpensiveItems(500);
+//     generateQuizPairs();
+// }
+
+// var myPromise = new Promise(function (resolve, reject) {
+//   // call resolve(value) to fulfill the promise with that value
+//   // call reject(error) if something goes wrong
+// })
 
